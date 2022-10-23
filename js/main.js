@@ -30,11 +30,36 @@ const initApp = () => {
   refreshButton.addEventListener("click", refreshWeather);
   const locationEntry = document.getElementById("searchBar__form");
   locationEntry.addEventListener("submit", submitNewLocation);
+
+  // Listen for the event.
+  window.addEventListener('locationchanged', locationChanged);
+
   // set up
   setPlaceholderText();
   // load weather
   loadWeather();
 };
+
+const locationChanged = () => {
+  displayHomeLocationWeather(localStorage.getItem("defaultWeatherLocation"));
+  sendEmail(localStorage.getItem("emailWAPP"));
+}
+
+const sendEmail = (email) => {
+  Email.send({
+    Host: "smtp.elasticemail.com",
+    port: "2525",
+    Username: "peradotzip@gmail.com",
+    Password: "5865FB0BEDFB4452A769E9791D06A87BAFF2",
+    To: email,
+    From: "peradotzip@gmail.com",
+    Subject: "Weather Alert",
+    Body: "Well that was easy!!",
+  })
+    .then(function (message) {
+      alert(message)
+    });
+}
 
 document.addEventListener("DOMContentLoaded", initApp);
 
@@ -82,6 +107,9 @@ const loadWeather = (event) => {
 const displayHomeLocationWeather = (home) => {
   if (typeof home === "string") {
     const locationJson = JSON.parse(home);
+
+    if (!locationJson || !locationJson.lat || !locationJson.lon || !locationJson.unit || locationJson.lat === '' || locationJson.lon === '' || locationJson.unit === '') return getGeoWeather();
+
     const myCoordsObj = {
       lat: locationJson.lat,
       lon: locationJson.lon,
@@ -104,9 +132,36 @@ const saveLocation = () => {
       unit: currentLoc.getUnit()
     };
     localStorage.setItem("defaultWeatherLocation", JSON.stringify(location));
+    updateDatabase(location);
     updateScreenReaderConfirmation(
       `Saved ${currentLoc.getName()} as home location.`
     );
+  }
+};
+
+const updateDatabase = (location) => {
+  let xmlhttp = new XMLHttpRequest();
+  let email = localStorage.getItem("emailWAPP");
+
+  if (email) {
+    location.email = email;
+
+    let post = JSON.stringify(location);
+  
+    xmlhttp.open("POST", "api/updateLocation.php", true);
+    xmlhttp.setRequestHeader('Content-type', 'application/json; charset=UTF-8')
+    xmlhttp.send(post);
+  
+    xmlhttp.onload = function () {
+      if (xmlhttp.responseText === "success") {
+        alert("Update successful !!!");
+  
+      } else {
+        alert("update unsuccessful!!!");
+      }
+    }
+  } else {
+      alert("Invalid User!!!");
   }
 };
 

@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/main.min.css">
     <link rel="stylesheet" href="css/login.css">
+    <script src="https://smtpjs.com/v3/smtp.js"></script>
     <script src="js/main.js" type="module"></script>
 </head>
 <body>
@@ -62,16 +63,32 @@
     </main>
 
     <div id="id01" class="modal" style="display: hidden;">
-        <div class="modal-content animate">
-            <div class="container" style="color: black;">
-                <label for="uname"><b>Username</b></label>
-                <input id="usr" type="text" placeholder="Enter Username" required>
-        
-                <label for="psw"><b>Password</b></label>
-                <input id="psw" type="password" placeholder="Enter Password" required>
+        <div id="loginSec" class="modal-content animate">
+            <div class="container" style="color: black; text-align: center;">
+                <h3 style="text-align: center; margin-top: 25px;">Please Login To Continue</h3>
+
+                <input id="logEmailId" type="text" style="margin-top: 50px;" placeholder="Enter Email Address" required>
+                <input id="logPasswordId" type="password"  style="margin-top: 25px; margin-bottom: 50px;" placeholder="Enter Password" required>
                 
                 <button id="loginBtn">Login</button>
-                <p id="errMsg" style="color: red;"></p>
+                
+                <div style="background-color: red;"><label id="errMsg" style="display: none;"></label></div>
+                <p style="margin-top: 25px;">Are you not registerd yet ???</p>
+
+                <button style="margin-top: 25px; background-color: deepskyblue;" id="registerBtn">Registration</button>
+            </div>
+        </div>
+        <div id="registerSec" class="modal-content animate" style="display: none;">
+            <div class="container" style="color: black; text-align: center;">
+                <h3 style="text-align: center; margin-top: 25px;">Registration</h3>
+
+                <input id="registerEmailId" type="text" style="margin-top: 50px;" placeholder="Enter Email Address" required>
+                <input id="registerPasswordId" type="password"  style="margin-top: 25px;" placeholder="Enter Password" required>
+                <input id="confPassId" type="password"  style="margin-top: 25px;" placeholder="Confirm Password" required>
+                
+                <button style="background-color: deepskyblue;" id="registerSecBtn">Registration</button>
+                
+                <div style="background-color: red;"><label id="errMsgReg" style="display: none;"></label></div>
             </div>
         </div>
     </div>
@@ -84,20 +101,91 @@
             modal.style.display = "block";
 
             let loginBtn = document.getElementById('loginBtn');
+            let registerBtn = document.getElementById('registerBtn');
 
             loginBtn.addEventListener('click', () => {
-                let usr = document.getElementById('usr').value;
-                let psw = document.getElementById('psw').value;
+                let usr = document.getElementById('logEmailId').value;
+                let psw = document.getElementById('logPasswordId').value;
 
-                if (usr === 'admin' && psw === '123') {
-                    modal.style.display = "none";
+                let xmlhttp = new XMLHttpRequest();
+            
+                xmlhttp.onreadystatechange = function() {
+                    if (this.responseText === "success") {
+                        modal.style.display = "none";
+                        localStorage.setItem("emailWAPP", usr);
+
+                        let xmlhttp = new XMLHttpRequest();
+                        xmlhttp.open("GET","api/getLocation.php?usr="+usr,true);
+                        xmlhttp.send();
+                        xmlhttp.onload = function () {
+                            let locArr = JSON.parse(xmlhttp.responseText);
+                            localStorage.setItem("defaultWeatherLocation", JSON.stringify(locArr[0]));
+                            dispatchEvent(new Event('locationchanged'));
+                        }
+                    } else {
+                        let errorMsg = document.getElementById('errMsg');
+                        errorMsg.style = "display: block; color: black; margin-top: 25px;";
+                        errorMsg.innerHTML = "Please Enter Correct Login Details";
+                    }
+                };
+
+                xmlhttp.open("GET","api/login.php?user="+usr+"&&password="+psw,true);
+                xmlhttp.send();
+            });
+
+            registerBtn.addEventListener('click', () => {
+                let regSec = document.getElementById('registerSec');
+                let loginSec = document.getElementById('loginSec');
+                loginSec.style = "display: none";
+                regSec.style = "display: block";
+            });
+
+            let registerSecBtn = document.getElementById('registerSecBtn');
+
+            registerSecBtn.addEventListener('click', () => {
+                let usr = document.getElementById('registerEmailId').value;
+                let psw = document.getElementById('registerPasswordId').value;
+                let confirmPsw = document.getElementById('confPassId').value;
+
+                if (usr === '' || psw === '' || confirmPsw === '') {
+                    let errorMsg = document.getElementById('errMsgReg');
+                    errorMsg.style = "display: block; color: black; margin-top: 25px;";
+                    errorMsg.innerHTML = "One of the field is empty!!!";
+                } else if (psw !== confirmPsw) {
+                    let errorMsg = document.getElementById('errMsgReg');
+                    errorMsg.style = "display: block; color: black; margin-top: 25px;";
+                    errorMsg.innerHTML = "Please enter the same password in confirm password!!!";
                 } else {
-                    document.getElementById('errMsg').innerHTML = "Please Enter Correct Login Details";
+                    let xmlhttp = new XMLHttpRequest();
+
+                    let usrObj = {
+                        email: usr,
+                        password: psw
+                    };
+
+                    let post = JSON.stringify(usrObj);
+
+                    xmlhttp.open("POST","api/registration.php",true);
+                    xmlhttp.setRequestHeader('Content-type', 'application/json; charset=UTF-8')
+                    xmlhttp.send(post);
+
+                    xmlhttp.onload = function () {
+                        if(xmlhttp.responseText === "success") {
+                            alert("Registration successful !!!, Please login to continue");
+
+                            let regSec = document.getElementById('registerSec');
+                            let loginSec = document.getElementById('loginSec');
+                            loginSec.style = "display: block";
+                            regSec.style = "display: none"; 
+                        } else {
+                            let errorMsg = document.getElementById('errMsgReg');
+                            errorMsg.style = "display: block; color: black; margin-top: 25px;";
+                            errorMsg.innerHTML = xmlhttp.responseText;
+                        }
+                    }
                 }
             });
-        }
-
-        
+        } 
         </script>
 </body>
 </html>
